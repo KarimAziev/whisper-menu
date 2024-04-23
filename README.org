@@ -1,8 +1,9 @@
 #+OPTIONS: ^:nil tags:nil num:nil
 
 * About
+This package provides a powerful and user-friendly transient menu for configuring and interacting with the Whisper API within Emacs.
 
-This package provides a transient menu for configuring and interacting with the Whisper API within Emacs.
+[[./whisper-menu.png]]
 
 * Table of Contents                                       :TOC_2_gh:QUOTE:
 #+BEGIN_QUOTE
@@ -12,6 +13,9 @@ This package provides a transient menu for configuring and interacting with the 
   - [[#with-use-package-and-straightel][With use-package and straight.el]]
   - [[#manual-installation][Manual installation]]
 - [[#usage][Usage]]
+  - [[#configurable-settings][Configurable Settings]]
+  - [[#actions][Actions]]
+- [[#custom-variables][Custom Variables]]
 #+END_QUOTE
 
 * Requirements
@@ -24,6 +28,8 @@ This package provides a transient menu for configuring and interacting with the 
 
 
 * Installation
+
+First ensure that you have installed [[https://github.com/natrys/whisper.el][whisper]] package.
 
 ** With use-package and straight.el
 #+begin_src elisp :eval no
@@ -52,4 +58,41 @@ Add the downloaded directory to the load path:
 
 * Usage
 
-Run =M-x whisper-menu=.
+The cornerstone of Whisper Menu is its transient command =whisper-menu=, which grants quick access to a variety of settings and actions related to the Whisper API.
+
+To invoke the Whisper Menu, execute:
+
+#+begin_example
+=M-x whisper-menu=
+#+end_example
+
+Or use the keybinding you've configured during the installation.
+
+** Configurable Settings
+
+All settings can be temporarily adjusted or permanently saved for future sessions. Settings can be saved using the =whisper-menu-save-variables= command (in the menu it is bound to =s=) or by executing a corresponding suffix command with a prefix argument.
+
+The command =whisper-menu-save-variables= saves the values of modified variables
+as defined in the =whisper-menu-saveable-variables= customizable variable.
+
+- *Number of Threads*: Adjust how many threads the Whisper API should utilize.
+- *Language Settings*: Choose the default language for transcription. Languages can be dynamically added or removed from the set of choices.
+- *Translation Toggle*: Enable or disable automatic translation.
+- *Model Settings*: Select the Whisper model size according to your needs.
+- *Additional Settings*: Insert text at the point of invocation and toggle whether the cursor should return to the start position after executing a command.
+
+** Actions
+
+- *Saving Configurations*: After tweaking settings to your preference, you can save the modified variables for persistent use.
+- *Audio Transcription/Translation*: Directly transcribe or translate audio from within Emacs.
+
+* Custom Variables
+
+Whisper Menu introduces several custom variables to tailor the tool to your preferences:
+
+- =whisper-menu-align-column=: Adjusts the column alignment for menu entries for better readability.
+- =whisper-menu-language-choices=: Manages the available language options for menu translations, with an easy mechanism to add or remove languages. This variable can also be configured interactively by the commands
+=whisper-menu-add-language-choice= and =whisper-menu-remove-language-choice=. 
+- =whisper-menu-saveable-variables=: Defines which Whisper-related variables are eligible for saving, ensuring your setup persists across sessions.
+- =whisper-menu-language-completing-read-threshold=: Sets a threshold for when to switch from cycling languages to prompting the user with a completion list.
+
