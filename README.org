@@ -91,8 +91,7 @@ as defined in the =whisper-menu-saveable-variables= customizable variable.
 Whisper Menu introduces several custom variables to tailor the tool to your preferences:
 
 - =whisper-menu-align-column=: Adjusts the column alignment for menu entries for better readability.
-- =whisper-menu-language-choices=: Manages the available language options for menu translations, with an easy mechanism to add or remove languages. This variable can also be configured interactively by the commands
-=whisper-menu-add-language-choice= and =whisper-menu-remove-language-choice=. 
+- =whisper-menu-language-choices=: Manages the available language options for menu translations, with an easy mechanism to add or remove languages. This variable can also be configured interactively by the commands =whisper-menu-add-language-choice= and =whisper-menu-remove-language-choice=.
 - =whisper-menu-saveable-variables=: Defines which Whisper-related variables are eligible for saving, ensuring your setup persists across sessions.
 - =whisper-menu-language-completing-read-threshold=: Sets a threshold for when to switch from cycling languages to prompting the user with a completion list.
 
