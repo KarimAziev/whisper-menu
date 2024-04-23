@@ -1,0 +1,55 @@
+#+OPTIONS: ^:nil tags:nil num:nil
+
+* About
+
+This package provides a transient menu for configuring and interacting with the Whisper API within Emacs.
+
+* Table of Contents                                       :TOC_2_gh:QUOTE:
+#+BEGIN_QUOTE
+- [[#about][About]]
+- [[#requirements][Requirements]]
+- [[#installation][Installation]]
+  - [[#with-use-package-and-straightel][With use-package and straight.el]]
+  - [[#manual-installation][Manual installation]]
+- [[#usage][Usage]]
+#+END_QUOTE
+
+* Requirements
+
+| Name      | Version |
+|-----------+---------|
+| Emacs     |    28.1 |
+| [[https://github.com/natrys/whisper.el][whisper]]   |   0.3.0 |
+| transient |   0.6.0 |
+
+
+* Installation
+
+** With use-package and straight.el
+#+begin_src elisp :eval no
+(use-package whisper-menu
+  :straight (whisper-menu
+             :repo "KarimAziev/whisper-menu"
+             :type git
+             :host github)
+  :commands (whisper-menu))
+#+end_src
+
+** Manual installation
+
+Download the source code and put it wherever you like, e.g. into =~/.emacs.d/whisper-menu/=
+
+#+begin_src shell :eval no
+git clone https://github.com/KarimAziev/whisper-menu.git ~/.emacs.d/whisper-menu/
+#+end_src
+
+Add the downloaded directory to the load path:
+
+#+begin_src elisp :eval no
+(add-to-list 'load-path "~/.emacs.d/whisper-menu/")
+(require 'whisper-menu)
+#+end_src
+
+* Usage
+
+Run =M-x whisper-menu=.
