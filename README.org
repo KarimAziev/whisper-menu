@@ -63,7 +63,7 @@ The cornerstone of Whisper Menu is its transient command =whisper-menu=, which g
 To invoke the Whisper Menu, execute:
 
 #+begin_example
-=M-x whisper-menu=
+M-x whisper-menu
 #+end_example
 
 Or use the keybinding you've configured during the installation.
