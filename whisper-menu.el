@@ -49,35 +49,27 @@ preferences for menu layout."
   :group 'whisper-menu
   :type 'integer)
 
-(defcustom whisper-menu-language-choices '("auto" "en" "zh" "de" "es" "ru" "ko"
-                                           "fr" "ja" "pt" "tr" "pl" "ca" "nl"
-                                           "ar" "sv" "it" "id" "hi" "fi" "vi"
-                                           "iw" "uk" "el" "ms" "cs" "ro" "da"
-                                           "hu" "ta" "no" "th" "ur" "hr" "bg"
-                                           "lt" "la" "mi" "ml" "cy" "sk" "te"
-                                           "fa" "lv" "bn" "sr" "az" "sl" "kn"
-                                           "et" "mk" "br" "eu" "is" "hy" "ne"
-                                           "mn" "bs" "kk" "sq" "sw" "gl" "mr"
-                                           "pa" "ht" "si" "km" "sn" "yo" "so"
-                                           "af" "oc" "ka" "be" "tg" "sd" "gu"
-                                           "am" "yi" "lo" "uz" "fo" "ps" "tk"
-                                           "nn" "mt" "sa" "lb" "my" "bo" "tl"
-                                           "mg" "as" "tt" "haw" "ln" "ha" "ba"
-                                           "jw" "su")
+
+(defcustom whisper-menu-language-choices '("auto" "en")
   "Available language options for Whisper menu translations.
 
-A list of language codes representing the available language options for the
-Whisper menu. The default list includes a wide range of languages, such as
-\"auto\" for automatic language detection, \"en\" for English, \"zh\" for
-Chinese, and many others, covering a broad spectrum of the world's languages.
+A list of language codes representing the available options for the Whisper
+menu's language settings.
 
-Each element in the list is a string that corresponds to the ISO language code
-for that language. The \"auto\" option can be used to automatically detect the
-language based on the input text.
+This variable can also be configured interactively by the commands
+`whisper-menu-add-language-choice' and `whisper-menu-remove-language-choice'.
+
+Each list element is a string that corresponds to the ISO code for that
+language.
+
+The \"auto\" option can be used to automatically detect the language based on
+the input text.
 
 This list is used to configure the language setting for the Whisper menu,
 allowing for dynamic language selection based on user preference or text
-content. Users can select their desired language from this list when interacting
+content.
+
+Users can select their desired language from this list when interacting
 with the Whisper menu functionalities."
   :group 'whisper-menu
   :type '(set :greedy t
@@ -184,6 +176,196 @@ with the Whisper menu functionalities."
           (repeat :inline t
            (string))))
 
+(defcustom whisper-menu-saveable-variables '(whisper-language
+                                             whisper-model
+                                             whisper-translate
+                                             whisper-menu-language-choices)
+  "List of Whisper-related variables eligible for saving.
+
+This includes variables that can be saved using the command
+`whisper-menu-save-variables'.
+
+The default variables include settings for language, model, translation and
+language choices for the whisper menu."
+  :group 'whisper-menu
+  :type '(set :greedy t
+          (const whisper-language)
+          (const whisper-model)
+          (const whisper-translate)
+          (const whisper-use-threads)
+          (const whisper-insert-text-at-point)
+          (const whisper-return-cursor-to-start)
+          (const whisper-menu-language-choices)
+          (repeat :inline t
+           (symbol))))
+
+(defcustom whisper-menu-language-completing-read-threshold 4
+  "Minimum number of languages to choose with `completing-read'."
+  :type 'integer
+  :group 'whisper-menu)
+
+
+(defclass whisper-menu-transient-language (transient-infix)
+  ((format :initform " %k %d %v"))
+  "Class used for switching the language.")
+
+(cl-defmethod transient-init-value ((this whisper-menu-transient-language))
+  "Set `whisper-language' based on object's value or default choice.
+
+Argument THIS is an instance created with the function
+`whisper-menu-transient-language'."
+  (let ((value
+         (cond ((and (slot-boundp this 'value)
+                     (oref this value))
+                (oref this value))
+               (t (or whisper-language (car whisper-menu-language-choices))))))
+    (whisper-menu-set-variable 'whisper-language value)
+    (oset this value value)))
+
+(cl-defmethod transient-format-value ((this whisper-menu-transient-language))
+  "Format and display selected language value with visual cues.
+
+Argument THIS is an instance created with the function
+`whisper-menu-transient-language'."
+  (let ((value (transient-infix-value this)))
+    (if (> (length whisper-menu-language-choices)
+           whisper-menu-language-completing-read-threshold)
+        (propertize
+         (substring-no-properties
+          value)
+         'face
+         'transient-value)
+      (concat
+       (propertize "[" 'face 'transient-inactive-value)
+       (mapconcat
+        (lambda (choice)
+          (propertize (substring-no-properties choice) 'face
+                      (if (string= choice value)
+                          'transient-value
+                        'transient-inactive-value)))
+        (append (list value)
+                (remove value whisper-menu-language-choices))
+        (propertize "|" 'face 'transient-inactive-value))
+       (propertize "]" 'face 'transient-inactive-value)))))
+
+(cl-defmethod transient-infix-read ((this whisper-menu-transient-language))
+  "Cycle through language choices or prompt for selection based on threshold.
+
+Argument THIS is an instance created with the function
+`whisper-menu-transient-language'."
+  (let* ((choices whisper-menu-language-choices)
+         (current-idx (or (seq-position choices (transient-infix-value this)) -1))
+         (next-idx (% (1+ current-idx)
+                      (length choices)))
+         (next-choice
+          (if (> (length choices)
+                 whisper-menu-language-completing-read-threshold)
+              (whisper-menu--read-language "Language: " choices)
+            (nth next-idx choices))))
+    (whisper-menu-set-variable 'whisper-language next-choice)
+    next-choice))
+
+(cl-defmethod transient-infix-value ((this whisper-menu-transient-language))
+  "Return current language choice from `whisper-menu-language-choices'.
+
+Argument THIS is an instance created with the function
+`whisper-menu-transient-language'."
+  (let* ((choices whisper-menu-language-choices)
+         (current-idx (or (seq-position choices (oref this value)) -1)))
+    (nth current-idx choices)))
+
+(transient-define-infix whisper-menu--language-source ()
+  :class 'whisper-menu-transient-language
+  :description "language"
+  :argument "-l")
+
+
+(defun whisper-menu--get-all-languages ()
+  "Combine predefined and custom language choices, removing duplicates."
+  (delete-dups (append
+                whisper-menu-language-choices
+                (mapcar
+                 (pcase-lambda (`(,_c ,_k ,_label ,value))
+                   value)
+                 (butlast (cdddr (get 'whisper-menu-language-choices
+                                      'custom-type))
+                          1)))))
+
+(defun whisper-menu-get-modified-variables ()
+  "Return modified variables from `whisper-menu-saveable-variables'."
+  (seq-filter (lambda (var)
+                (and (custom-variable-p var)
+                     (not
+                      (equal (symbol-value var)
+                             (whisper-menu-get-custom-value var)))))
+              whisper-menu-saveable-variables))
+
+(defun whisper-menu-save-variables ()
+  "Save value of modified variables from `whisper-menu-saveable-variables'."
+  (interactive)
+  (dolist (var (whisper-menu-get-modified-variables))
+    (whisper-menu-set-variable var (symbol-value var)
+                               t)))
+
+
+(defun whisper-menu-add-language-choice (&optional arg)
+  "Add a language choice to Whisper menu's language options.
+
+Optional argument ARG is a prefix argument, which if non-nil, saves the variable
+`whisper-menu-language-choices' value persistently."
+  (interactive "P")
+  (let* ((value
+          (whisper-menu--read-language "Add language: "
+                                       (seq-difference
+                                        (whisper-menu--get-all-languages)
+                                        whisper-menu-language-choices)))
+         (choices (append whisper-menu-language-choices (list value))))
+    (whisper-menu-set-variable 'whisper-menu-language-choices choices arg)))
+
+
+(defun whisper-menu-remove-language-choice (&optional arg)
+  "Remove a language choice from Whisper menu options.
+
+Optional argument ARG is a prefix argument, which if non-nil, saves the variable
+`whisper-menu-language-choices' value persistently."
+  (interactive "P")
+  (let* ((value
+          (whisper-menu--read-language "Remove language: "
+                                       whisper-menu-language-choices))
+         (choices (remove value whisper-menu-language-choices)))
+    (unless choices
+      (user-error "At least one language should be specified"))
+    (while (not (member whisper-language choices))
+      (whisper-menu-set-variable 'whisper-language
+                                 (whisper-menu--read-language
+                                  "Set language: "
+                                  choices)
+                                 arg))
+    (whisper-menu-set-variable 'whisper-menu-language-choices choices arg)))
+
+(defun whisper-menu--read-language (prompt &optional langs)
+  "PROMPT user to select a language with completion and annotations.
+
+Argument PROMPT is a string displayed to the user when asking for input.
+
+Optional argument LANGS is a list of language codes to restrict the selection."
+  (let* ((alist (mapcar
+                 (pcase-lambda (`(,_c ,_k ,label ,value))
+                   (cons value label))
+                 (butlast (cdddr (get 'whisper-menu-language-choices
+                                      'custom-type))
+                          1)))
+         (annotf (lambda (str)
+                   (concat " " (or (cdr (assoc str alist)) "")))))
+    (completing-read prompt
+                     (lambda (str pred action)
+                       (if (eq action 'metadata)
+                           `(metadata
+                             (annotation-function . ,annotf))
+                         (complete-with-action action (or langs alist) str
+                                               pred))))))
+
+
 
 (defun whisper-menu--format-toggle-description (description value &optional
                                                             on-label off-label
@@ -240,8 +422,10 @@ Argument VALUE is the new value for the VARIABLE."
   "Return the saved or standard value of the symbol SYM.
 
 Argument SYM is a symbol whose custom value is retrieved."
-  (or (car (get sym 'saved-value))
-      (eval (car (get sym 'standard-value)))))
+  (or
+   (when (car (get sym 'saved-value))
+     (eval (car (get sym 'saved-value))))
+   (eval (car (get sym 'standard-value)))))
 
 (defun whisper-menu-set-variable (var value &optional save comment)
   "Set or SAVE a variable VAR to VALUE, optionally with COMMENT.
@@ -279,14 +463,16 @@ value persistently."
 (defun whisper-menu-toggle-translate (&optional arg)
   "Toggle the `whisper-translate' variable on or off.
 
-Optional argument ARG is a raw prefix argument."
+Optional argument ARG is a prefix argument, which if non-nil, saves the variable
+value persistently."
   (interactive "P")
   (whisper-menu-set-variable 'whisper-translate (not whisper-translate) arg))
 
 (defun whisper-menu-toggle-insert-text-at-point (&optional arg)
   "Toggle the state of `whisper-insert-text-at-point' variable.
 
-Optional argument ARG is a raw prefix argument."
+Optional argument ARG is a prefix argument, which if non-nil, saves the variable
+value persistently."
   (interactive "P")
   (whisper-menu-set-variable 'whisper-insert-text-at-point
                              (not
@@ -296,36 +482,13 @@ Optional argument ARG is a raw prefix argument."
 (defun whisper-menu-toggle-return-cursor-to-start (&optional arg)
   "Toggle the state of `whisper-return-cursor-to-start' variable.
 
-Optional argument ARG is a raw prefix argument."
+Optional argument ARG is a prefix argument, which if non-nil, saves the variable
+value persistently."
   (interactive "P")
   (whisper-menu-set-variable 'whisper-return-cursor-to-start
                              (not
                               whisper-return-cursor-to-start)
                              arg))
-
-(defun whisper-menu-set-language (&optional arg)
-  "Set the language for Whisper menu with completion.
-
-Optional argument ARG is used to determine if the language setting should be
-saved permanently."
-  (interactive "P")
-  (let*
-      ((alist (mapcar
-               (pcase-lambda (`(,_c ,_k ,label ,value))
-                 (cons value label))
-               (butlast (cdddr (get 'whisper-menu-language-choices
-                                    'custom-type))
-                        1)))
-       (annotf (lambda (str)
-                 (concat " " (or (cdr (assoc str alist)) ""))))
-       (value
-        (completing-read "Language: "
-                         (lambda (str pred action)
-                           (if (eq action 'metadata)
-                               `(metadata
-                                 (annotation-function . ,annotf))
-                             (complete-with-action action alist str pred))))))
-    (whisper-menu-set-variable 'whisper-language value arg)))
 
 (defun whisper-menu-set-model (&optional arg)
   "Set the `whisper-model' variable to a user-selected model size.
@@ -339,12 +502,19 @@ The optional argument ARG determines whether the setting should be saved."
 
 ;;;###autoload (autoload 'whisper-menu "whisper-menu" nil t)
 (transient-define-prefix whisper-menu ()
-  "Whisper-Menu."
+  "Menu with Whisper commands and settings.
+
+Settings can be saved using the `whisper-menu-save-variables' command or by
+executing a suffix command with a prefix argument.
+
+The command `whisper-menu-save-variables' saves the values of modified variables
+as defined in the `whisper-menu-saveable-variables' customizable variable."
   :transient-suffix #'transient--do-stay
+  :refresh-suffixes t
   [["Settings"
     ("r" whisper-menu-set-use-threads :description
      (lambda ()
-       (concat "how many threads to use "
+       (concat "Number of threads to use "
                (propertize
                 (format "%s" whisper-use-threads)
                 'face
@@ -353,27 +523,23 @@ The optional argument ARG determines whether the setting should be saved."
      :description
      (lambda ()
        (whisper-menu--format-toggle-description
-        "translate"
+        "Toggle translate"
         whisper-translate)))
     ("c" whisper-menu-toggle-return-cursor-to-start
      :description
      (lambda ()
        (whisper-menu--format-toggle-description
-        "return-cursor-to-start"
+        "Toggle return-cursor-to-start"
         whisper-return-cursor-to-start)))
     ("i" whisper-menu-toggle-insert-text-at-point
      :description
      (lambda ()
        (whisper-menu--format-toggle-description
-        "insert-text-at-point"
+        "Toggle insert-text-at-point"
         whisper-insert-text-at-point)))
-    ("l" whisper-menu-set-language :description (lambda ()
-                                                  (concat "language "
-                                                          (propertize
-                                                           (substring-no-properties
-                                                            whisper-language)
-                                                           'face
-                                                           'transient-value))))
+    ("l" whisper-menu--language-source)
+    ("+" "Add language choice" whisper-menu-add-language-choice)
+    ("-" "Remove language choice" whisper-menu-remove-language-choice)
     ("m" whisper-menu-set-model :description (lambda ()
                                                (concat "model "
                                                        (propertize
@@ -382,7 +548,35 @@ The optional argument ARG determines whether the setting should be saved."
                                                         'face
                                                         'transient-value))))]]
   ["Actions"
-   ("RET" "Transcribe/translate audio" whisper-run :transient nil)
+   ("s" whisper-menu-save-variables
+    :inapt-if-not whisper-menu-get-modified-variables
+    :description
+    (lambda ()
+      (concat "Save modified variables "
+              (mapconcat (lambda (it)
+                           (propertize
+                            (substring-no-properties (symbol-name it))
+                            'face
+                            'transient-value))
+                         (whisper-menu-get-modified-variables)
+                         ", "))))
+   ("RET" whisper-run
+    :description
+    (lambda ()
+      (concat "Transcribe/translate audio "
+              (when-let ((status
+                          (cond ((process-live-p whisper--transcribing-process)
+                                 "transcribing")
+                                ((process-live-p whisper--recording-process)
+                                 "recording")
+                                ((and
+                                  (buffer-live-p whisper--compilation-buffer)
+                                  (process-live-p
+                                   (get-buffer-process
+                                    whisper--compilation-buffer)))
+                                 "installing"))))
+                (propertize status 'face 'transient-value))))
+    :transient nil)
    ("f" "Transcribe/translate file" whisper-file :transient nil)])
 
 
