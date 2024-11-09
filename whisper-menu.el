@@ -564,7 +564,7 @@ as defined in the `whisper-menu-saveable-variables' customizable variable."
     :description
     (lambda ()
       (concat "Transcribe/translate audio "
-              (when-let ((status
+              (when-let* ((status
                           (cond ((process-live-p whisper--transcribing-process)
                                  "transcribing")
                                 ((process-live-p whisper--recording-process)
